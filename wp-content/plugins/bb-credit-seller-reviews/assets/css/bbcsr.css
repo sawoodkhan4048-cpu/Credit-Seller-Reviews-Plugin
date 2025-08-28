@@ -2,9 +2,29 @@
 .bbcsr-stars { color: #f1c40f; font-size: 16px; }
 .bbcsr-stars .star.half { color: #f39c12; }
 .bbcsr-review-list { list-style: none; margin: 0; padding: 0; }
-.bbcsr-review-item { border-bottom: 1px solid #eee; padding: 12px 0; }
-.bbcsr-review-header { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
-.bbcsr-review-text { color: #333; }
+.bbcsr-review-item { border: 1px solid #e6e6e6; border-radius: 8px; padding: 12px; margin-bottom: 12px; background: #fff; }
+.bbcsr-review-meta { display: grid; grid-template-columns: 40px 1fr auto auto; gap: 8px; align-items: center; }
+.bbcsr-avatar img { border-radius: 50%; }
+.bbcsr-name { font-weight: 600; }
+.bbcsr-date { color: #666; font-size: 12px; }
+.bbcsr-review-text { color: #333; margin-top: 8px; }
 #bbcsr-review-form { margin-top: 16px; }
 #bbcsr-review-form .bbcsr-field { margin-bottom: 12px; }
+.bbcsr-stars-input { display: inline-flex; gap: 6px; cursor: pointer; }
+.bbcsr-stars-input input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+.bbcsr-star { font-size: 22px; color: #ccc; transition: color .15s; }
+.bbcsr-star:hover, .bbcsr-stars-input input[type="radio"]:checked + .bbcsr-star { color: #f1c40f; }
+.bbcsr-summary-box { display: grid; grid-template-columns: 160px 1fr; gap: 16px; align-items: center; margin: 12px 0; }
+.bbcsr-avg-stars .bbcsr-stars { font-size: 22px; }
+.bbcsr-avg-number { font-size: 28px; font-weight: 700; }
+.bbcsr-breakdown {}
+.bbcsr-breakdown-row { display: grid; grid-template-columns: 36px 1fr 40px; gap: 8px; align-items: center; margin: 4px 0; }
+.bbcsr-row-bar { display: block; height: 8px; background: #f2f2f2; border-radius: 4px; overflow: hidden; }
+.bbcsr-row-bar > span { display: block; height: 100%; background: #f1c40f; }
+
+@media (max-width: 600px) {
+	.bbcsr-summary-box { grid-template-columns: 1fr; }
+	.bbcsr-review-meta { grid-template-columns: 32px 1fr; }
+	.bbcsr-avg-number { font-size: 22px; }
+}
 

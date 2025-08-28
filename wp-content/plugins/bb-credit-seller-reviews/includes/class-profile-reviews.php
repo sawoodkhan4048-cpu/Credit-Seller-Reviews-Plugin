@@ -41,9 +41,29 @@ class Profile_Reviews {
 		if ( ! $core->user_is_credit_seller( $user_id ) ) {
 			return;
 		}
-		$summary = $core->get_seller_rating_summary( $user_id );
-		$stars   = $this->get_stars_html( (float) $summary['avg_rating'] );
-		echo '<div class="bbcsr-summary">' . $stars . ' <span class="bbcsr-total">(' . esc_html( (string) $summary['total'] ) . ')</span></div>';
+		$summary   = $core->get_seller_rating_summary( $user_id );
+		$breakdown = $core->get_rating_breakdown( $user_id );
+		$stars     = $this->get_stars_html( (float) $summary['avg_rating'] );
+		echo '<div class="bbcsr-summary-box bb-grid">';
+		echo '<div class="bbcsr-avg">';
+		echo '<div class="bbcsr-avg-stars" aria-label="' . esc_attr__( 'Average rating', 'bb-credit-seller-reviews' ) . '">' . $stars . '</div>';
+		echo '<div class="bbcsr-avg-number">' . esc_html( number_format_i18n( (float) $summary['avg_rating'], 1 ) ) . '</div>';
+		echo '<div class="bbcsr-total">' . esc_html( sprintf( _n( '%s review', '%s reviews', (int) $summary['total'], 'bb-credit-seller-reviews' ), number_format_i18n( (int) $summary['total'] ) ) ) . '</div>';
+		echo '</div>';
+
+		echo '<div class="bbcsr-breakdown" aria-label="' . esc_attr__( 'Rating breakdown', 'bb-credit-seller-reviews' ) . '">';
+		for ( $r = 5; $r >= 1; $r-- ) {
+			$count = isset( $breakdown['breakdown'][ $r ] ) ? (int) $breakdown['breakdown'][ $r ] : 0;
+			$total = max( 1, (int) $breakdown['total'] );
+			$percent = min( 100, round( ( $count / $total ) * 100 ) );
+			echo '<div class="bbcsr-breakdown-row">';
+			echo '<span class="bbcsr-row-label">' . esc_html( (string) $r ) . '★</span>';
+			echo '<span class="bbcsr-row-bar"><span style="width:' . esc_attr( (string) $percent ) . '%"></span></span>';
+			echo '<span class="bbcsr-row-count">' . esc_html( number_format_i18n( $count ) ) . '</span>';
+			echo '</div>';
+		}
+		echo '</div>';
+		echo '</div>';
 	}
 
 	public function render_reviews_section() {
@@ -53,17 +73,27 @@ class Profile_Reviews {
 			return;
 		}
 
-		echo '<div id="bbcsr-reviews" class="bbcsr-reviews">';
-		echo '<h3>' . esc_html__( 'Seller Reviews', 'bb-credit-seller-reviews' ) . '</h3>';
+		echo '<div id="bbcsr-reviews" class="bbcsr-reviews bb-grid">';
+		echo '<h3 class="section-title">' . esc_html__( 'Seller Reviews', 'bb-credit-seller-reviews' ) . '</h3>';
 
-		$reviews = $core->get_reviews_for_seller( $user_id, 'approved', 1, 10 );
+		$reviews = $core->get_seller_reviews( $user_id, 10, 0 );
 		if ( ! empty( $reviews ) ) {
 			echo '<ul class="bbcsr-review-list">';
 			foreach ( $reviews as $review ) {
-				$stars = $this->get_stars_html( (float) $review->rating );
-				echo '<li class="bbcsr-review-item">';
-				echo '<div class="bbcsr-review-header">' . $stars . ' <span class="bbcsr-date">' . esc_html( mysql2date( get_option( 'date_format' ), $review->review_date ) ) . '</span></div>';
+				$reviewer_id = (int) $review->reviewer_id;
+				$avatar      = function_exists( 'bp_core_fetch_avatar' ) ? bp_core_fetch_avatar( [ 'item_id' => $reviewer_id, 'type' => 'thumb', 'width' => 40, 'height' => 40, 'html' => true ] ) : get_avatar( $reviewer_id, 40 );
+				$name        = function_exists( 'bp_core_get_user_displayname' ) ? bp_core_get_user_displayname( $reviewer_id ) : get_the_author_meta( 'display_name', $reviewer_id );
+				$stars       = $this->get_stars_html( (float) $review->rating );
+				echo '<li class="bbcsr-review-item bb-card">';
+				echo '<div class="bbcsr-review-meta">';
+				echo '<span class="bbcsr-avatar">' . $avatar . '</span>';
+				echo '<span class="bbcsr-name">' . esc_html( $name ) . '</span>';
+				echo '<span class="bbcsr-stars">' . $stars . '</span>';
+				echo '<span class="bbcsr-date">' . esc_html( mysql2date( get_option( 'date_format' ), $review->review_date ) ) . '</span>';
+				echo '</div>';
 				echo '<div class="bbcsr-review-text">' . wp_kses_post( wpautop( $review->review_text ) ) . '</div>';
+				// Optional helpful buttons placeholder for future.
+				// echo '<div class="bbcsr-review-actions"><button class="button is-small">' . esc_html__( 'Helpful', 'bb-credit-seller-reviews' ) . '</button></div>';
 				echo '</li>';
 			}
 			echo '</ul>';
@@ -84,24 +114,33 @@ class Profile_Reviews {
 			echo '<p>' . esc_html__( 'You cannot review yourself.', 'bb-credit-seller-reviews' ) . '</p>';
 			return;
 		}
-
-		echo '<form id="bbcsr-review-form" method="post">';
-		echo '<div class="bbcsr-field">';
-		echo '<label>' . esc_html__( 'Rating', 'bb-credit-seller-reviews' ) . '</label>';
-		echo '<select name="rating" required>';
-		for ( $i = 5; $i >= 1; $i-- ) {
-			echo '<option value="' . esc_attr( (string) $i ) . '">' . esc_html( (string) $i ) . '</option>';
+		$core = BB_Seller_Reviews::instance();
+		$existing = $core->get_user_review_by_reviewer( $seller_id, get_current_user_id() );
+		if ( $existing ) {
+			echo '<p>' . esc_html__( 'You have already submitted a review for this seller.', 'bb-credit-seller-reviews' ) . '</p>';
+			return;
 		}
-		echo '</select>';
+
+		echo '<form id="bbcsr-review-form" method="post" class="bb-form" aria-label="' . esc_attr__( 'Submit a review', 'bb-credit-seller-reviews' ) . '">';
+		echo '<div class="bbcsr-field">';
+		echo '<label class="bb-label">' . esc_html__( 'Your Rating', 'bb-credit-seller-reviews' ) . '</label>';
+		echo '<div class="bbcsr-stars-input" role="radiogroup" aria-label="' . esc_attr__( 'Select a rating', 'bb-credit-seller-reviews' ) . '">';
+		for ( $i = 1; $i <= 5; $i++ ) {
+			$val = (string) $i;
+			echo '<input type="radio" id="bbcsr-star-' . esc_attr( $val ) . '" name="rating" value="' . esc_attr( $val ) . '" aria-label="' . esc_attr( sprintf( __( '%s star', 'bb-credit-seller-reviews' ), $val ) ) . '" />';
+			echo '<label for="bbcsr-star-' . esc_attr( $val ) . '" class="bbcsr-star">★</label>';
+		}
+		echo '</div>';
 		echo '</div>';
 		echo '<div class="bbcsr-field">';
-		echo '<label>' . esc_html__( 'Review', 'bb-credit-seller-reviews' ) . '</label>';
-		echo '<textarea name="review_text" rows="4" required></textarea>';
+		echo '<label class="bb-label" for="bbcsr-review-text">' . esc_html__( 'Your Review', 'bb-credit-seller-reviews' ) . '</label>';
+		echo '<textarea id="bbcsr-review-text" name="review_text" rows="5" maxlength="4000" required aria-required="true"></textarea>';
+		echo '<small class="bbcsr-help">' . esc_html__( 'Max 500 words.', 'bb-credit-seller-reviews' ) . '</small>';
 		echo '</div>';
 		echo '<input type="hidden" name="seller_id" value="' . esc_attr( (string) $seller_id ) . '" />';
 		echo '<input type="hidden" name="action" value="bbcsr_submit_review" />';
 		echo '<input type="hidden" name="nonce" value="' . esc_attr( wp_create_nonce( 'bbcsr_nonce' ) ) . '" />';
-		echo '<button type="submit" class="button">' . esc_html__( 'Submit Review', 'bb-credit-seller-reviews' ) . '</button>';
+		echo '<button type="submit" class="button button-primary">' . esc_html__( 'Submit Review', 'bb-credit-seller-reviews' ) . '</button>';
 		echo '</form>';
 	}
 
@@ -110,7 +149,7 @@ class Profile_Reviews {
 		$full   = (int) floor( $rating );
 		$half   = ( $rating - $full ) >= 0.5 ? 1 : 0;
 		$empty  = 5 - $full - $half;
-		$html   = '<span class="bbcsr-stars">';
+		$html   = '<span class="bbcsr-stars" aria-hidden="true">';
 		$html  .= str_repeat( '<span class="star full">★</span>', $full );
 		$html  .= str_repeat( '<span class="star half">☆</span>', $half );
 		$html  .= str_repeat( '<span class="star empty">☆</span>', $empty );
@@ -126,6 +165,12 @@ class Profile_Reviews {
 		$seller_id   = isset( $_POST['seller_id'] ) ? absint( $_POST['seller_id'] ) : 0;
 		$rating      = isset( $_POST['rating'] ) ? absint( $_POST['rating'] ) : 0;
 		$review_text = isset( $_POST['review_text'] ) ? wp_unslash( $_POST['review_text'] ) : '';
+
+		// Enforce 500 words max
+		$word_count = str_word_count( wp_strip_all_tags( $review_text ) );
+		if ( $word_count > 500 ) {
+			wp_send_json_error( [ 'message' => __( 'Review exceeds 500 words.', 'bb-credit-seller-reviews' ) ] );
+		}
 
 		$core = BB_Seller_Reviews::instance();
 		$result = $core->insert_review( $seller_id, get_current_user_id(), $rating, $review_text );
