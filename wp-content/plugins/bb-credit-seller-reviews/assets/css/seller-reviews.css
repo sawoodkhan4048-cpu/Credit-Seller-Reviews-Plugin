@@ -1,0 +1,189 @@
+/* BuddyBoss Credit Seller Reviews - Theme Integration Styles */
+
+/* Root variables with graceful fallbacks */
+:root {
+	--bb-primary: #1a73e8;
+	--bb-text: #1f2937;
+	--bb-muted: #6b7280;
+	--bb-border: #e5e7eb;
+	--bb-surface: #ffffff;
+	--bb-surface-2: #f9fafb;
+	--bb-gold: #ffd700;
+	--bb-gold-dark: #f1c40f;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bb-text: #e5e7eb;
+		--bb-muted: #9ca3af;
+		--bb-border: #374151;
+		--bb-surface: #111827;
+		--bb-surface-2: #0b1220;
+	}
+}
+
+/* Section container */
+.bb-seller-reviews-section {
+	background: var(--bb-surface);
+	border: 1px solid var(--bb-border);
+	border-radius: 10px;
+	padding: 16px;
+	margin: 16px 0;
+}
+
+.bb-seller-reviews-section .section-title {
+	margin: 0 0 12px;
+	font-size: 18px;
+	font-weight: 700;
+	color: var(--bb-text);
+}
+
+/* Summary box layout to match BuddyBoss grids */
+.bbcsr-summary-box {
+	background: var(--bb-surface-2);
+	border: 1px solid var(--bb-border);
+	border-radius: 10px;
+	padding: 12px;
+}
+
+.bbcsr-avg-number {
+	color: var(--bb-text);
+}
+
+.bbcsr-total {
+	color: var(--bb-muted);
+	font-size: 12px;
+}
+
+.bbcsr-breakdown .bbcsr-row-bar {
+	background: var(--bb-border);
+}
+
+.bbcsr-row-bar > span {
+	background: var(--bb-gold-dark);
+}
+
+/* Star rating display */
+.bb-star-rating,
+.bbcsr-stars {
+	display: inline-flex;
+	gap: 2px;
+	font-size: 18px;
+}
+
+.bb-star-rating .star,
+.bbcsr-stars .star {
+	color: var(--bb-gold);
+}
+
+.bb-star-rating .star.empty,
+.bbcsr-stars .star.empty {
+	color: #e0e0e0;
+}
+
+/* Half-star support using gradient */
+.bb-star-rating .star.half,
+.bbcsr-stars .star.half {
+	background: linear-gradient(90deg, var(--bb-gold) 50%, #e0e0e0 50%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+}
+
+/* Review cards */
+.bb-review-card,
+.bbcsr-review-item.bb-card {
+	background: var(--bb-surface);
+	border: 1px solid var(--bb-border);
+	border-radius: 10px;
+	box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.bbcsr-review-meta .bbcsr-name {
+	color: var(--bb-text);
+}
+
+.bbcsr-review-meta .bbcsr-date {
+	color: var(--bb-muted);
+}
+
+.bbcsr-review-text {
+	color: var(--bb-text);
+}
+
+/* Buttons - inherit BuddyBoss styles where available */
+.bbcsr-review-actions .button,
+.bb-review-form .button {
+	background: var(--bb-primary);
+	border: 1px solid var(--bb-primary);
+	color: #fff;
+	border-radius: 6px;
+	padding: 6px 12px;
+	font-weight: 600;
+}
+
+.bbcsr-review-actions .button:hover,
+.bb-review-form .button:hover {
+	filter: brightness(0.95);
+}
+
+/* Review form */
+.bb-review-form,
+#bbcsr-review-form {
+	background: var(--bb-surface);
+	border: 1px solid var(--bb-border);
+	border-radius: 10px;
+	padding: 12px;
+	margin-top: 16px;
+}
+
+.bb-review-form .bbcsr-stars-input .bbcsr-star,
+#bbcsr-review-form .bbcsr-stars-input .bbcsr-star {
+	font-size: 22px;
+	color: #c9c9c9;
+	cursor: pointer;
+}
+
+.bb-review-form .bbcsr-stars-input .bbcsr-star.hover,
+#bbcsr-review-form .bbcsr-stars-input .bbcsr-star.hover {
+	color: var(--bb-gold);
+}
+
+.bb-review-form textarea,
+#bbcsr-review-form textarea {
+	width: 100%;
+	border: 1px solid var(--bb-border);
+	border-radius: 6px;
+	padding: 10px;
+	min-height: 120px;
+	background: var(--bb-surface-2);
+	color: var(--bb-text);
+}
+
+/* Load more button */
+.bbcsr-load-more.button {
+	margin-top: 12px;
+}
+
+/* Profile tab badge */
+.bb-tab .bbcsr-badge {
+	background: var(--bb-primary);
+	color: #fff;
+	border-radius: 999px;
+	padding: 0 8px;
+	font-size: 11px;
+	margin-inline-start: 6px;
+}
+
+/* RTL support */
+html[dir="rtl"] .bbcsr-review-meta {
+	direction: rtl;
+}
+
+/* Responsive tweaks */
+@media (max-width: 782px) {
+	.bbcsr-review-meta { grid-template-columns: 32px 1fr; }
+	.bbcsr-avg-number { font-size: 22px; }
+	.bb-review-form, #bbcsr-review-form { padding: 10px; }
+}
+

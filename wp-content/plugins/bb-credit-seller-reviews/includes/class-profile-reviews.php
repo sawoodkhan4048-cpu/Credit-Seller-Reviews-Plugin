@@ -27,6 +27,7 @@ class Profile_Reviews {
 
 	public function enqueue_assets() {
 		wp_enqueue_style( 'bbcsr-styles', BBCSR_PLUGIN_URL . 'assets/css/bbcsr.css', [], BBCSR_VERSION );
+		wp_enqueue_style( 'bbcsr-seller-styles', BBCSR_PLUGIN_URL . 'assets/css/seller-reviews.css', [ 'bbcsr-styles' ], BBCSR_VERSION );
 		wp_enqueue_script( 'bbcsr-scripts', BBCSR_PLUGIN_URL . 'assets/js/bbcsr.js', [ 'jquery' ], BBCSR_VERSION, true );
 		wp_enqueue_script( 'bbcsr-seller-reviews', BBCSR_PLUGIN_URL . 'assets/js/seller-reviews.js', [ 'jquery' ], BBCSR_VERSION, true );
 		wp_localize_script( 'bbcsr-scripts', 'BBCSR', [
