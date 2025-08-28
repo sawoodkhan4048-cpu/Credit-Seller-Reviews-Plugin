@@ -76,7 +76,7 @@ function bbcsr_activate() {
 	dbDelta( $sql );
 
 	// Default options.
-	add_option( 'bbcsr_default_status', 'pending' ); // pending | approved | rejected
+	add_option( 'bbcsr_default_status', 'approved' ); // approved by default; can be changed to pending/rejected
 	add_option( 'bbcsr_enable_multiple_reviews', false );
 
 	// Capabilities.
