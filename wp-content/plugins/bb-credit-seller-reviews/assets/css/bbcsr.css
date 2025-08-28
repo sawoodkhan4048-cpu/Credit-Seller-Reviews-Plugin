@@ -1,0 +1,10 @@
+.bbcsr-summary { margin: 8px 0; font-size: 14px; }
+.bbcsr-stars { color: #f1c40f; font-size: 16px; }
+.bbcsr-stars .star.half { color: #f39c12; }
+.bbcsr-review-list { list-style: none; margin: 0; padding: 0; }
+.bbcsr-review-item { border-bottom: 1px solid #eee; padding: 12px 0; }
+.bbcsr-review-header { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+.bbcsr-review-text { color: #333; }
+#bbcsr-review-form { margin-top: 16px; }
+#bbcsr-review-form .bbcsr-field { margin-bottom: 12px; }
+
