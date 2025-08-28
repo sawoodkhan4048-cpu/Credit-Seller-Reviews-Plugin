@@ -115,6 +115,7 @@ add_action( 'admin_notices', 'bbcsr_admin_dependency_notice' );
 // Autoload includes.
 require_once BBCSR_PLUGIN_DIR . 'includes/class-bb-seller-reviews.php';
 require_once BBCSR_PLUGIN_DIR . 'includes/class-profile-reviews.php';
+require_once BBCSR_PLUGIN_DIR . 'includes/class-ajax-handler.php';
 
 // Bootstrap plugin after BuddyBoss/BuddyPress is loaded.
 function bbcsr_bootstrap() {
@@ -124,6 +125,7 @@ function bbcsr_bootstrap() {
 
 	\BB\CreditSellerReviews\BB_Seller_Reviews::instance();
 	\BB\CreditSellerReviews\Profile_Reviews::instance();
+\t\BB\CreditSellerReviews\Ajax_Handler::instance();
 }
 add_action( 'bp_include', 'bbcsr_bootstrap' );
 

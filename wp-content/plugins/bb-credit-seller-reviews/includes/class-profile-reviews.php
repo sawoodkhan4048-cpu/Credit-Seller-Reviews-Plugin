@@ -22,14 +22,18 @@ class Profile_Reviews {
 
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_assets' ] );
 
-		add_action( 'wp_ajax_bbcsr_submit_review', [ $this, 'handle_submit_review' ] );
-		add_action( 'wp_ajax_nopriv_bbcsr_submit_review', [ $this, 'handle_submit_review' ] );
+		// AJAX handled by dedicated Ajax_Handler class.
 	}
 
 	public function enqueue_assets() {
 		wp_enqueue_style( 'bbcsr-styles', BBCSR_PLUGIN_URL . 'assets/css/bbcsr.css', [], BBCSR_VERSION );
 		wp_enqueue_script( 'bbcsr-scripts', BBCSR_PLUGIN_URL . 'assets/js/bbcsr.js', [ 'jquery' ], BBCSR_VERSION, true );
+		wp_enqueue_script( 'bbcsr-seller-reviews', BBCSR_PLUGIN_URL . 'assets/js/seller-reviews.js', [ 'jquery' ], BBCSR_VERSION, true );
 		wp_localize_script( 'bbcsr-scripts', 'BBCSR', [
+			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+			'nonce'   => wp_create_nonce( 'bbcsr_nonce' ),
+		] );
+		wp_localize_script( 'bbcsr-seller-reviews', 'BBCSR', [
 			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 			'nonce'   => wp_create_nonce( 'bbcsr_nonce' ),
 		] );
@@ -41,16 +45,21 @@ class Profile_Reviews {
 		if ( ! $core->user_is_credit_seller( $user_id ) ) {
 			return;
 		}
+		echo $this->get_summary_box_html( $user_id );
+	}
+
+	public function get_summary_box_html( $user_id ) {
+		$core      = BB_Seller_Reviews::instance();
 		$summary   = $core->get_seller_rating_summary( $user_id );
 		$breakdown = $core->get_rating_breakdown( $user_id );
 		$stars     = $this->get_stars_html( (float) $summary['avg_rating'] );
+		ob_start();
 		echo '<div class="bbcsr-summary-box bb-grid">';
 		echo '<div class="bbcsr-avg">';
 		echo '<div class="bbcsr-avg-stars" aria-label="' . esc_attr__( 'Average rating', 'bb-credit-seller-reviews' ) . '">' . $stars . '</div>';
 		echo '<div class="bbcsr-avg-number">' . esc_html( number_format_i18n( (float) $summary['avg_rating'], 1 ) ) . '</div>';
 		echo '<div class="bbcsr-total">' . esc_html( sprintf( _n( '%s review', '%s reviews', (int) $summary['total'], 'bb-credit-seller-reviews' ), number_format_i18n( (int) $summary['total'] ) ) ) . '</div>';
 		echo '</div>';
-
 		echo '<div class="bbcsr-breakdown" aria-label="' . esc_attr__( 'Rating breakdown', 'bb-credit-seller-reviews' ) . '">';
 		for ( $r = 5; $r >= 1; $r-- ) {
 			$count = isset( $breakdown['breakdown'][ $r ] ) ? (int) $breakdown['breakdown'][ $r ] : 0;
@@ -64,6 +73,7 @@ class Profile_Reviews {
 		}
 		echo '</div>';
 		echo '</div>';
+		return (string) ob_get_clean();
 	}
 
 	public function render_reviews_section() {
@@ -80,21 +90,7 @@ class Profile_Reviews {
 		if ( ! empty( $reviews ) ) {
 			echo '<ul class="bbcsr-review-list">';
 			foreach ( $reviews as $review ) {
-				$reviewer_id = (int) $review->reviewer_id;
-				$avatar      = function_exists( 'bp_core_fetch_avatar' ) ? bp_core_fetch_avatar( [ 'item_id' => $reviewer_id, 'type' => 'thumb', 'width' => 40, 'height' => 40, 'html' => true ] ) : get_avatar( $reviewer_id, 40 );
-				$name        = function_exists( 'bp_core_get_user_displayname' ) ? bp_core_get_user_displayname( $reviewer_id ) : get_the_author_meta( 'display_name', $reviewer_id );
-				$stars       = $this->get_stars_html( (float) $review->rating );
-				echo '<li class="bbcsr-review-item bb-card">';
-				echo '<div class="bbcsr-review-meta">';
-				echo '<span class="bbcsr-avatar">' . $avatar . '</span>';
-				echo '<span class="bbcsr-name">' . esc_html( $name ) . '</span>';
-				echo '<span class="bbcsr-stars">' . $stars . '</span>';
-				echo '<span class="bbcsr-date">' . esc_html( mysql2date( get_option( 'date_format' ), $review->review_date ) ) . '</span>';
-				echo '</div>';
-				echo '<div class="bbcsr-review-text">' . wp_kses_post( wpautop( $review->review_text ) ) . '</div>';
-				// Optional helpful buttons placeholder for future.
-				// echo '<div class="bbcsr-review-actions"><button class="button is-small">' . esc_html__( 'Helpful', 'bb-credit-seller-reviews' ) . '</button></div>';
-				echo '</li>';
+				echo $this->get_single_review_html( $review );
 			}
 			echo '</ul>';
 		} else {
@@ -103,6 +99,33 @@ class Profile_Reviews {
 
 		$this->render_review_form( $user_id );
 		echo '</div>';
+	}
+
+	public function get_single_review_html( $review ) {
+		$reviewer_id = (int) $review->reviewer_id;
+		$avatar      = function_exists( 'bp_core_fetch_avatar' ) ? bp_core_fetch_avatar( [ 'item_id' => $reviewer_id, 'type' => 'thumb', 'width' => 40, 'height' => 40, 'html' => true ] ) : get_avatar( $reviewer_id, 40 );
+		$name        = function_exists( 'bp_core_get_user_displayname' ) ? bp_core_get_user_displayname( $reviewer_id ) : get_the_author_meta( 'display_name', $reviewer_id );
+		$stars       = $this->get_stars_html( (float) $review->rating );
+		$can_manage  = current_user_can( 'manage_bb_seller_reviews' );
+		$can_edit    = is_user_logged_in() && ( get_current_user_id() === $reviewer_id || $can_manage );
+		ob_start();
+		echo '<li class="bbcsr-review-item bb-card" data-review-id="' . esc_attr( (string) $review->id ) . '">';
+		echo '<div class="bbcsr-review-meta">';
+		echo '<span class="bbcsr-avatar">' . $avatar . '</span>';
+		echo '<span class="bbcsr-name">' . esc_html( $name ) . '</span>';
+		echo '<span class="bbcsr-stars">' . $stars . '</span>';
+		echo '<span class="bbcsr-date">' . esc_html( mysql2date( get_option( 'date_format' ), $review->review_date ) ) . '</span>';
+		echo '</div>';
+		echo '<div class="bbcsr-review-text">' . wp_kses_post( wpautop( $review->review_text ) ) . '</div>';
+		if ( $can_edit ) {
+			echo '<div class="bbcsr-review-actions">';
+			echo '<button class="button is-small bbcsr-edit-review">' . esc_html__( 'Edit', 'bb-credit-seller-reviews' ) . '</button> ';
+			echo '<button class="button is-small bbcsr-delete-review">' . esc_html__( 'Delete', 'bb-credit-seller-reviews' ) . '</button> ';
+			echo '<button class="button is-small bbcsr-flag-review">' . esc_html__( 'Report', 'bb-credit-seller-reviews' ) . '</button>';
+			echo '</div>';
+		}
+		echo '</li>';
+		return (string) ob_get_clean();
 	}
 
 	private function render_review_form( $seller_id ) {
@@ -157,34 +180,6 @@ class Profile_Reviews {
 		return $html;
 	}
 
-	public function handle_submit_review() {
-		check_ajax_referer( 'bbcsr_nonce', 'nonce' );
-		if ( ! is_user_logged_in() ) {
-			wp_send_json_error( [ 'message' => __( 'You must be logged in.', 'bb-credit-seller-reviews' ) ] );
-		}
-		$seller_id   = isset( $_POST['seller_id'] ) ? absint( $_POST['seller_id'] ) : 0;
-		$rating      = isset( $_POST['rating'] ) ? absint( $_POST['rating'] ) : 0;
-		$review_text = isset( $_POST['review_text'] ) ? wp_unslash( $_POST['review_text'] ) : '';
-
-		// Enforce 500 words max
-		$word_count = str_word_count( wp_strip_all_tags( $review_text ) );
-		if ( $word_count > 500 ) {
-			wp_send_json_error( [ 'message' => __( 'Review exceeds 500 words.', 'bb-credit-seller-reviews' ) ] );
-		}
-
-		$core = BB_Seller_Reviews::instance();
-		$result = $core->insert_review( $seller_id, get_current_user_id(), $rating, $review_text );
-
-		if ( is_wp_error( $result ) ) {
-			wp_send_json_error( [ 'message' => $result->get_error_message() ] );
-		}
-
-		$status = get_option( 'bbcsr_default_status', 'pending' );
-		$message = 'approved' === $status
-			? __( 'Review submitted successfully.', 'bb-credit-seller-reviews' )
-			: __( 'Review submitted and awaits approval.', 'bb-credit-seller-reviews' );
-
-		wp_send_json_success( [ 'message' => $message ] );
-	}
+    // AJAX moved to Ajax_Handler class.
 }
 

@@ -170,6 +170,40 @@ class BB_Seller_Reviews {
 	}
 
 	/**
+	 * Advanced query for reviews with filtering and sorting.
+	 * Args: status, limit, offset, rating, order_by (review_date|rating), order (DESC|ASC)
+	 */
+	public function query_reviews( $seller_id, $args = [] ) {
+		global $wpdb;
+		$defaults = [
+			'status'   => 'approved',
+			'limit'    => 10,
+			'offset'   => 0,
+			'rating'   => null,
+			'order_by' => 'review_date',
+			'order'    => 'DESC',
+		];
+		$args = wp_parse_args( $args, $defaults );
+		$allowed_order_by = [ 'review_date', 'rating' ];
+		$allowed_order    = [ 'ASC', 'DESC' ];
+		$order_by = in_array( $args['order_by'], $allowed_order_by, true ) ? $args['order_by'] : 'review_date';
+		$order    = in_array( strtoupper( $args['order'] ), $allowed_order, true ) ? strtoupper( $args['order'] ) : 'DESC';
+
+		$where = $wpdb->prepare( 'seller_id = %d', absint( $seller_id ) );
+		if ( ! empty( $args['status'] ) ) {
+			$where .= $wpdb->prepare( ' AND status = %s', sanitize_key( $args['status'] ) );
+		}
+		if ( $args['rating'] ) {
+			$where .= $wpdb->prepare( ' AND rating = %d', max( 1, min( 5, absint( $args['rating'] ) ) ) );
+		}
+
+		$limit  = absint( $args['limit'] );
+		$offset = absint( $args['offset'] );
+		$sql    = "SELECT * FROM {$this->table_name} WHERE {$where} ORDER BY {$order_by} {$order} LIMIT {$limit} OFFSET {$offset}";
+		return $wpdb->get_results( $sql );
+	}
+
+	/**
 	 * Public API: get_seller_reviews wrapper using limit/offset.
 	 */
 	public function get_seller_reviews( $seller_id, $limit = 10, $offset = 0, $status = 'approved' ) {
