@@ -15,6 +15,9 @@ class BB_Seller_Reviews {
 	/** @var array */
 	private $allowed_statuses = [ 'approved', 'pending', 'rejected', 'flagged' ];
 
+	/** Rate limit meta key */
+	private $rate_limit_meta = '_bbcsr_last_review_time';
+
 	public static function instance() {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
@@ -108,9 +111,28 @@ class BB_Seller_Reviews {
 			$status = 'pending';
 		}
 
+		// Rate limiting: 1 review per seller per user overall; also enforce min time between attempts
 		$can = $this->can_user_review( $seller_id, $reviewer_id );
 		if ( is_wp_error( $can ) ) {
 			return $can;
+		}
+
+		$min_chars = max( 0, (int) get_option( 'bbcsr_min_chars', 0 ) );
+		if ( $min_chars && mb_strlen( wp_strip_all_tags( $review_text ) ) < $min_chars ) {
+			return new \WP_Error( 'too_short', sprintf( __( 'Review must be at least %d characters.', 'bb-credit-seller-reviews' ), $min_chars ) );
+		}
+
+		// Profanity filter
+		$bad = array_filter( array_map( 'trim', explode( ',', (string) get_option( 'bbcsr_profanity_list', '' ) ) ) );
+		if ( ! empty( $bad ) ) {
+			$lower = mb_strtolower( wp_strip_all_tags( $review_text ) );
+			foreach ( $bad as $word ) {
+				$w = mb_strtolower( $word );
+				if ( $w && false !== mb_strpos( $lower, $w ) ) {
+					$status = 'pending';
+					break;
+				}
+			}
 		}
 
 		$inserted = $wpdb->insert(
